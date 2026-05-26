@@ -21,6 +21,11 @@ spring:
     port: 5672
     username: ${RABBITMQ_USER:guest}
     password: ${RABBITMQ_PASSWORD:guest}
+    connection-timeout: 3000
+    listener:
+      simple:
+        auto-startup: false
+        missing-queues-fatal: false
 
 server:
   port: ${PORT:8003}
