@@ -39,15 +39,21 @@ public class InventoryService {
 
     @Transactional
     public Inventory reduceStock(Long productId, Integer amount) {
+        // If the product has no inventory record yet, create one on-the-fly.
+        // This handles products created before inventory-service was reachable.
         Inventory inventory = inventoryRepository.findByProductId(productId)
-                .orElseThrow(() -> new RuntimeException("Producto no encontrado en inventario: " + productId));
+                .orElseGet(() -> {
+                    log.warn("Producto {} no encontrado en inventario — creando registro con stock 0. " +
+                             "Sincronizar manualmente si tiene stock real.", productId);
+                    return inventoryRepository.save(new Inventory(productId, 0, 10));
+                });
 
         if (inventory.getQuantity() < amount) {
             throw new RuntimeException("Stock insuficiente para el producto: " + productId);
         }
 
         inventory.setQuantity(inventory.getQuantity() - amount);
-        
+
         if (inventory.getQuantity() <= inventory.getLowStockThreshold()) {
             log.warn("ALERTA: Stock bajo para el producto {}. Cantidad actual: {}", productId, inventory.getQuantity());
         }
