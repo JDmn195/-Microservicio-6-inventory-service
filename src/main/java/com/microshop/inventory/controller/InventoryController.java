@@ -9,7 +9,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/inventory")
-@CrossOrigin(origins = "*") // Para desarrollo, permitir peticiones desde el front
 public class InventoryController {
 
     private final InventoryService inventoryService;
