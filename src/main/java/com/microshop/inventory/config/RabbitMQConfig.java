@@ -12,11 +12,18 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.net.URI;
+import java.net.URISyntaxException;
+
 @Configuration
 public class RabbitMQConfig {
 
     public static final String ORDER_QUEUE = "order_queue";
 
+    @Value("${spring.rabbitmq.url:}")
+    private String rabbitmqUrl;
+
+    // Fallback values for local development
     @Value("${spring.rabbitmq.host:localhost}")
     private String host;
 
@@ -30,13 +37,19 @@ public class RabbitMQConfig {
     private String password;
 
     @Bean
-    public ConnectionFactory connectionFactory() {
+    public ConnectionFactory connectionFactory() throws URISyntaxException {
         CachingConnectionFactory factory = new CachingConnectionFactory();
-        factory.setHost(host);
-        factory.setPort(port);
-        factory.setUsername(username);
-        factory.setPassword(password);
-        // No conectar en el arranque — conectar solo cuando se necesite
+
+        if (rabbitmqUrl != null && !rabbitmqUrl.isBlank()) {
+            // Use full amqps:// URL — SSL is handled automatically by the URI scheme
+            factory.setUri(new URI(rabbitmqUrl));
+        } else {
+            factory.setHost(host);
+            factory.setPort(port);
+            factory.setUsername(username);
+            factory.setPassword(password);
+        }
+
         factory.setConnectionTimeout(3000);
         return factory;
     }
@@ -44,7 +57,6 @@ public class RabbitMQConfig {
     @Bean
     public RabbitAdmin rabbitAdmin(ConnectionFactory connectionFactory) {
         RabbitAdmin admin = new RabbitAdmin(connectionFactory);
-        // No declarar queues/exchanges en el arranque si RabbitMQ no está disponible
         admin.setAutoStartup(false);
         return admin;
     }
@@ -64,7 +76,6 @@ public class RabbitMQConfig {
         SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
         factory.setConnectionFactory(connectionFactory);
         factory.setMessageConverter(jsonMessageConverter());
-        // No arrancar los listeners automáticamente si RabbitMQ no está disponible
         factory.setAutoStartup(false);
         factory.setMissingQueuesFatal(false);
         return factory;
